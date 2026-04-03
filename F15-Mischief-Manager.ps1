@@ -1,6 +1,15 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Hide the PowerShell console window so only the GUI is visible
+Add-Type -Name ConsoleUtils -Namespace Win32 -MemberDefinition '
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetConsoleWindow();
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+'
+[Win32.ConsoleUtils]::ShowWindow([Win32.ConsoleUtils]::GetConsoleWindow(), 0) | Out-Null
+
 # Win32 helpers for focusing Teams
 $signature = @"
 using System;
@@ -27,7 +36,7 @@ Add-Type $signature
 # ---------- UI ----------
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "F15 Mischief Manager ~(=^.^)~"
-$form.Size = New-Object System.Drawing.Size(580, 480)
+$form.Size = New-Object System.Drawing.Size(580, 660)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
@@ -172,6 +181,32 @@ $lblStatus.Font = New-Object System.Drawing.Font("Segoe UI", 9)
 $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(60, 40, 100)
 $statusPanel.Controls.Add($lblStatus)
 
+# Boop log
+$lblLog = New-Object System.Windows.Forms.Label
+$lblLog.Text = "Boop Log:"
+$lblLog.Location = New-Object System.Drawing.Point(12, 444)
+$lblLog.Size = New-Object System.Drawing.Size(200, 18)
+$lblLog.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+$lblLog.ForeColor = [System.Drawing.Color]::FromArgb(70, 50, 120)
+$form.Controls.Add($lblLog)
+
+$rtbLog = New-Object System.Windows.Forms.RichTextBox
+$rtbLog.Location = New-Object System.Drawing.Point(12, 466)
+$rtbLog.Size = New-Object System.Drawing.Size(545, 148)
+$rtbLog.ReadOnly = $true
+$rtbLog.BackColor = [System.Drawing.Color]::FromArgb(30, 20, 50)
+$rtbLog.ForeColor = [System.Drawing.Color]::FromArgb(200, 185, 255)
+$rtbLog.Font = New-Object System.Drawing.Font("Consolas", 8.5)
+$rtbLog.ScrollBars = 'Vertical'
+$rtbLog.BorderStyle = 'FixedSingle'
+$form.Controls.Add($rtbLog)
+
+function Add-BoopLog {
+    param($text)
+    $rtbLog.AppendText($text + "`n")
+    $rtbLog.ScrollToCaret()
+}
+
 # ---------- Logic ----------
 $winFormsTimer = $null
 $threadTimer = $null
@@ -247,17 +282,23 @@ function Send-F15 {
         $focused = Focus-Teams $true
         $time = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         if (-not $focused) {
-            $form.Invoke([action]{ $lblStatus.Text = "Mode: $mode | Last attempt: $time | Teams not found. Felix sighs." })
-            Write-Host "Attempted F15 at $time but Teams not found ($reason)"
+            $form.Invoke([action]{
+                $lblStatus.Text = "Mode: $mode | Last attempt: $time | Teams not found. Felix sighs."
+                Add-BoopLog "[$time] MISS  | Teams not found ($reason)"
+            })
             return
         }
         [System.Windows.Forms.SendKeys]::SendWait("{F15}")
         $quip = if ($rand.Next(1,4) -eq 2) { $quips[$rand.Next(0, $quips.Count)] } else { "Felix reports success! (=^v^=)" }
-        $form.Invoke([action]{ $lblStatus.Text = "Mode: $mode | Last sent: $time | $quip" })
-        Write-Host "Sent F15 at $time ($reason) - $quip"
+        $form.Invoke([action]{
+            $lblStatus.Text = "Mode: $mode | Last sent: $time | $quip"
+            Add-BoopLog "[$time] BOOP! | $reason | $quip"
+        })
     } catch {
-        $form.Invoke([action]{ $lblStatus.Text = "Uh oh! Error: $($_.Exception.Message) Felix is embarrassed." })
-        Write-Host "Error sending F15: $($_.Exception.Message)"
+        $form.Invoke([action]{
+            $lblStatus.Text = "Uh oh! Error: $($_.Exception.Message) Felix is embarrassed."
+            Add-BoopLog "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] ERROR | $($_.Exception.Message)"
+        })
     }
 }
 
@@ -278,6 +319,8 @@ function Stop-AllTimers {
         $lblStatus.Text = "Mode: Idle | Felix has clocked out and returned to napping. /\_/\"
     })
 }
+
+Add-BoopLog "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Felix is ready. Awaiting orders... (=^.^=)"
 
 # Normal mode
 $btnNormal.Add_Click({
