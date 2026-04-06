@@ -132,13 +132,12 @@ function New-PadButton {
         $bh = $sender.Height
         $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
         $dim = if ($sender.Enabled) { 1.0 } else { 0.35 }
-        function px([System.Drawing.Color]$c) {
-            [System.Drawing.Color]::FromArgb([int]($c.R*$dim),[int]($c.G*$dim),[int]($c.B*$dim))
-        }
-        $top    = px (if ($t.IsPressed) { $t.ColorBottom } else { $t.ColorTop    })
-        $bottom = px (if ($t.IsPressed) { $t.ColorTop    } else { $t.ColorBottom })
-        $tc     = px $t.ColorText
-        $bc     = px $t.ColorBorder
+        $rawTop    = if ($t.IsPressed) { $t.ColorBottom } else { $t.ColorTop    }
+        $rawBottom = if ($t.IsPressed) { $t.ColorTop    } else { $t.ColorBottom }
+        $top    = [System.Drawing.Color]::FromArgb([int]($rawTop.R*$dim),   [int]($rawTop.G*$dim),    [int]($rawTop.B*$dim))
+        $bottom = [System.Drawing.Color]::FromArgb([int]($rawBottom.R*$dim),[int]($rawBottom.G*$dim), [int]($rawBottom.B*$dim))
+        $tc     = [System.Drawing.Color]::FromArgb([int]($t.ColorText.R*$dim),  [int]($t.ColorText.G*$dim),  [int]($t.ColorText.B*$dim))
+        $bc     = [System.Drawing.Color]::FromArgb([int]($t.ColorBorder.R*$dim),[int]($t.ColorBorder.G*$dim),[int]($t.ColorBorder.B*$dim))
         $d    = $r * 2
         $path = New-Object System.Drawing.Drawing2D.GraphicsPath
         $path.AddArc(0,       0,       $d, $d, 180, 90)
