@@ -122,7 +122,7 @@ function New-PadButton {
         IsPressed    = $false
     }
     $btn.Add_MouseDown({ param($s,$e) $s.Tag.IsPressed = $true;  $s.Invalidate() })
-    $btn.Add_MouseUp  ({ param($s,$e) $s.Tag.IsPressed = $false; $s.Invalidate() })
+    $btn.Add_MouseUp({ param($s,$e) $s.Tag.IsPressed = $false; $s.Invalidate() })
     $btn.Add_Paint({
         param($sender, $e)
         $g  = $e.Graphics
