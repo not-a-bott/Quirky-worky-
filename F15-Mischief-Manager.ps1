@@ -33,23 +33,23 @@ public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int 
 "@
 Add-Type $signature
 
-# ---------- Colors ----------
-$clrFormBg     = [System.Drawing.Color]::FromArgb(28,  26,  22)
-$clrHeaderBg   = [System.Drawing.Color]::FromArgb(18,  17,  14)
-$clrHeaderText = [System.Drawing.Color]::FromArgb(230, 210, 160)
-$clrHeaderSub  = [System.Drawing.Color]::FromArgb(140, 128,  96)
-$clrLCDBezel   = [System.Drawing.Color]::FromArgb(22,  20,  16)
-$clrLCDBg      = [System.Drawing.Color]::FromArgb(14,  28,  18)
-$clrLCDText    = [System.Drawing.Color]::FromArgb(176, 210, 100)
-$clrLCDAmber   = [System.Drawing.Color]::FromArgb(210, 155,  50)
-$clrOrange     = [System.Drawing.Color]::FromArgb(242, 104,  34)
-$clrInputBg    = [System.Drawing.Color]::FromArgb(22,  20,  16)
-$clrInputLabel = [System.Drawing.Color]::FromArgb(140, 128,  96)
-$clrLogBg      = [System.Drawing.Color]::FromArgb(8,   14,  10)
+# ---------- Colors (EP-133 olive palette) ----------
+$clrFormBg     = [System.Drawing.Color]::FromArgb(22,  27,  16)   # dark army olive
+$clrHeaderBg   = [System.Drawing.Color]::FromArgb(13,  16,   9)   # near-black olive
+$clrHeaderText = [System.Drawing.Color]::FromArgb(220, 210, 165)  # warm cream
+$clrHeaderSub  = [System.Drawing.Color]::FromArgb(120, 138,  80)  # muted olive gold
+$clrLCDBezel   = [System.Drawing.Color]::FromArgb(16,  20,  12)   # dark olive bezel
+$clrLCDBg      = [System.Drawing.Color]::FromArgb(10,  22,  14)   # phosphor screen
+$clrLCDText    = [System.Drawing.Color]::FromArgb(168, 214,  90)  # bright phosphor green
+$clrLCDAmber   = [System.Drawing.Color]::FromArgb(210, 160,  45)  # amber status
+$clrOrange     = [System.Drawing.Color]::FromArgb(228,  92,  28)  # TE signature orange
+$clrInputBg    = [System.Drawing.Color]::FromArgb(16,  20,  12)
+$clrInputLabel = [System.Drawing.Color]::FromArgb(120, 138,  80)
+$clrLogBg      = [System.Drawing.Color]::FromArgb(6,   12,   8)
 
 # ---------- Form ----------
 $form = New-Object System.Windows.Forms.Form
-$form.Text            = "FELIX-133"
+$form.Text            = "FELIX"
 $form.Size            = New-Object System.Drawing.Size(580, 740)
 $form.StartPosition   = "CenterScreen"
 $form.FormBorderStyle = 'FixedDialog'
@@ -101,7 +101,7 @@ function New-PadButton {
         [System.Drawing.Color]$ColorBottom,
         [System.Drawing.Color]$ColorText,
         [System.Drawing.Color]$ColorBorder,
-        [int]$CornerRadius = 12
+        [int]$CornerRadius = 3
     )
     $btn              = New-Object System.Windows.Forms.Button
     $btn.Location     = New-Object System.Drawing.Point($X, $Y)
@@ -140,11 +140,15 @@ function New-PadButton {
         $bc     = [System.Drawing.Color]::FromArgb([int]($t.ColorBorder.R*$dim),[int]($t.ColorBorder.G*$dim),[int]($t.ColorBorder.B*$dim))
         $d    = $r * 2
         $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-        $path.AddArc(0,       0,       $d, $d, 180, 90)
-        $path.AddArc($bw-$d,  0,       $d, $d, 270, 90)
-        $path.AddArc($bw-$d,  $bh-$d,  $d, $d,   0, 90)
-        $path.AddArc(0,       $bh-$d,  $d, $d,  90, 90)
-        $path.CloseFigure()
+        if ($r -le 0) {
+            $path.AddRectangle((New-Object System.Drawing.Rectangle(0, 0, $bw, $bh)))
+        } else {
+            $path.AddArc(0,       0,       $d, $d, 180, 90)
+            $path.AddArc($bw-$d,  0,       $d, $d, 270, 90)
+            $path.AddArc($bw-$d,  $bh-$d,  $d, $d,   0, 90)
+            $path.AddArc(0,       $bh-$d,  $d, $d,  90, 90)
+            $path.CloseFigure()
+        }
         $g.SetClip($path)
         $grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
             (New-Object System.Drawing.Point(0,0)),
@@ -154,7 +158,8 @@ function New-PadButton {
         $grad.Dispose()
         if ($sender.Enabled -and -not $t.IsPressed) {
             $hiPen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(55,255,255,255), 1)
-            $g.DrawLine($hiPen, $r, 2, $bw-$r, 2)
+            $hiX = if ($r -le 0) { 1 } else { $r }
+            $g.DrawLine($hiPen, $hiX, 2, ($bw - $hiX), 2)
             $hiPen.Dispose()
         }
         $g.ResetClip()
@@ -219,7 +224,7 @@ Enable-DoubleBuffer $pnlHeader
 $form.Controls.Add($pnlHeader)
 
 $lblBrand           = New-Object System.Windows.Forms.Label
-$lblBrand.Text      = "F E L I X - 1 3 3"
+$lblBrand.Text      = "F E L I X"
 $lblBrand.Font      = New-Object System.Drawing.Font("Consolas", 18, [System.Drawing.FontStyle]::Bold)
 $lblBrand.ForeColor = $clrHeaderText
 $lblBrand.BackColor = [System.Drawing.Color]::Transparent
@@ -343,46 +348,48 @@ $pnlInterval.Controls.Add((Wrap-NUD $numRandMax 426 18))
 $form.Controls.Add($pnlInterval)
 
 # --- Pad buttons ---
+# EP-133 olive pad palette — all pads share the same dark olive rubber base,
+# differentiated by text color only (like the actual device)
 $btnNormal = New-PadButton `
     -Text "(=^.^=) GENTLE BOOP" -SubText "normal interval" `
     -X 12 -Y 276 -W 268 -H 78 `
-    -ColorTop    ([System.Drawing.Color]::FromArgb(58, 98, 58)) `
-    -ColorBottom ([System.Drawing.Color]::FromArgb(22, 42, 22)) `
-    -ColorText   ([System.Drawing.Color]::FromArgb(140,220,140)) `
-    -ColorBorder ([System.Drawing.Color]::FromArgb(80,140, 80))
+    -ColorTop    ([System.Drawing.Color]::FromArgb(64, 80, 44)) `
+    -ColorBottom ([System.Drawing.Color]::FromArgb(34, 44, 22)) `
+    -ColorText   ([System.Drawing.Color]::FromArgb(168,230,110)) `
+    -ColorBorder ([System.Drawing.Color]::FromArgb(48, 62, 30))
 
 $btnRandom = New-PadButton `
     -Text "(>^.^<) SURPRISE!" -SubText "random interval" `
     -X 292 -Y 276 -W 268 -H 78 `
-    -ColorTop    ([System.Drawing.Color]::FromArgb(52, 58, 98)) `
-    -ColorBottom ([System.Drawing.Color]::FromArgb(20, 22, 42)) `
-    -ColorText   ([System.Drawing.Color]::FromArgb(140,155,220)) `
-    -ColorBorder ([System.Drawing.Color]::FromArgb(80, 90,160))
+    -ColorTop    ([System.Drawing.Color]::FromArgb(54, 80, 58)) `
+    -ColorBottom ([System.Drawing.Color]::FromArgb(28, 44, 32)) `
+    -ColorText   ([System.Drawing.Color]::FromArgb(140,220,168)) `
+    -ColorBorder ([System.Drawing.Color]::FromArgb(38, 62, 42))
 
 $btnStop = New-PadButton `
     -Text "(=x.x=) HALT FELIX" -SubText "stop timers" `
     -X 12 -Y 364 -W 268 -H 78 `
-    -ColorTop    ([System.Drawing.Color]::FromArgb(108, 44, 24)) `
-    -ColorBottom ([System.Drawing.Color]::FromArgb( 48, 18, 10)) `
-    -ColorText   ([System.Drawing.Color]::FromArgb(240,140, 80)) `
-    -ColorBorder ([System.Drawing.Color]::FromArgb(160, 70, 34))
+    -ColorTop    ([System.Drawing.Color]::FromArgb(80, 56, 36)) `
+    -ColorBottom ([System.Drawing.Color]::FromArgb(44, 28, 18)) `
+    -ColorText   ([System.Drawing.Color]::FromArgb(240,160, 80)) `
+    -ColorBorder ([System.Drawing.Color]::FromArgb(60, 38, 22))
 $btnStop.Enabled = $false
 
 $btnPokeOnce = New-PadButton `
     -Text "(=^-.^=) POKE ONCE" -SubText "manual trigger" `
     -X 292 -Y 364 -W 268 -H 78 `
-    -ColorTop    ([System.Drawing.Color]::FromArgb( 98, 72, 16)) `
-    -ColorBottom ([System.Drawing.Color]::FromArgb( 44, 30,  8)) `
-    -ColorText   ([System.Drawing.Color]::FromArgb(240,190, 80)) `
-    -ColorBorder ([System.Drawing.Color]::FromArgb(160,120, 34))
+    -ColorTop    ([System.Drawing.Color]::FromArgb(80, 72, 36)) `
+    -ColorBottom ([System.Drawing.Color]::FromArgb(44, 38, 18)) `
+    -ColorText   ([System.Drawing.Color]::FromArgb(240,210, 90)) `
+    -ColorBorder ([System.Drawing.Color]::FromArgb(60, 52, 24))
 
 $btnExit = New-PadButton `
     -Text "(=^v^=)  CLOSE & FEED FELIX" `
     -X 12 -Y 452 -W 548 -H 48 `
-    -ColorTop    ([System.Drawing.Color]::FromArgb(72, 72, 38)) `
-    -ColorBottom ([System.Drawing.Color]::FromArgb(30, 30, 16)) `
-    -ColorText   ([System.Drawing.Color]::FromArgb(200,210,140)) `
-    -ColorBorder ([System.Drawing.Color]::FromArgb(100,100, 60))
+    -ColorTop    ([System.Drawing.Color]::FromArgb(56, 64, 38)) `
+    -ColorBottom ([System.Drawing.Color]::FromArgb(28, 34, 18)) `
+    -ColorText   ([System.Drawing.Color]::FromArgb(195,215,145)) `
+    -ColorBorder ([System.Drawing.Color]::FromArgb(40, 48, 26))
 
 $form.Controls.Add($btnNormal)
 $form.Controls.Add($btnRandom)
@@ -416,12 +423,12 @@ Enable-DoubleBuffer $form
 # ==================== ANIMATION ====================
 
 $framesIdle = @(
-    @("  /\_/\   FELIX-133       ",
+    @("  /\_/\   FELIX           ",
       " ( -.- )  KEY PUSHER      ",
       "  > ^ <   [ IDLE ]        ",
       " /|   |\  . . . . . . .   ",
       "  ~~---~~ . . . . . . .   "),
-    @("  /\_/\   FELIX-133       ",
+    @("  /\_/\   FELIX           ",
       " ( -.- )  KEY PUSHER      ",
       "  > ^ <   [ IDLE ]        ",
       " /|   |\  . . z Z z . .   ",
@@ -429,12 +436,12 @@ $framesIdle = @(
 )
 
 $framesActive = @(
-    @("  /\_/\   FELIX-133       ",
+    @("  /\_/\   FELIX           ",
       " ( o.o )  KEY PUSHER      ",
       "  > ^ <   [ ARMED ]       ",
       " /|   |\  * * * * * * *   ",
       "  ~~---~~ * * * * * * *   "),
-    @("  /\^/\   FELIX-133       ",
+    @("  /\^/\   FELIX           ",
       " ( O.O )  KEY PUSHER      ",
       "  > ^ <   [ ARMED ]       ",
       " /|   |\  * * * * * * *   ",
@@ -442,12 +449,12 @@ $framesActive = @(
 )
 
 $framesBoop = @(
-    @("  \^.^/   FELIX-133       ",
+    @("  \^.^/   FELIX           ",
       "  (^w^)   KEY PUSHER      ",
       "  /| |\   [ BOOP! ]       ",
       " / | | \  ! ! ! ! ! ! !   ",
       " ~~|=|~~  ! ! ! ! ! ! !   "),
-    @("  /^.^\   FELIX-133       ",
+    @("  /^.^\   FELIX           ",
       "  (>w<)   KEY PUSHER      ",
       "  /| |\   [ BOOP! ]       ",
       " / | | \  ! ! ! ! ! ! !   ",
@@ -455,12 +462,12 @@ $framesBoop = @(
 )
 
 $framesMiss = @(
-    @("  /\_/\   FELIX-133       ",
+    @("  /\_/\   FELIX           ",
       " ( o.O )  KEY PUSHER      ",
       "  > ? <   [ MISS ]        ",
       " /|   |\  ? ? ? ? ? ? ?   ",
       "  ~~---~~ ? ? ? ? ? ? ?   "),
-    @("  /\_/\   FELIX-133       ",
+    @("  /\_/\   FELIX           ",
       " ( -.- )  KEY PUSHER      ",
       "  > ? <   [ MISS ]        ",
       " /|   |\  ? ? ? ? ? ? ?   ",
