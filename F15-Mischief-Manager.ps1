@@ -165,18 +165,23 @@ function New-PadButton {
         $sf.Alignment     = [System.Drawing.StringAlignment]::Center
         $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
         $tb = New-Object System.Drawing.SolidBrush($tc)
+        # Pre-calculate geometry as explicit floats to avoid PowerShell
+        # misreading ($bh/2)-2 as two separate constructor arguments
+        $fw   = [float]($bw - 8)
+        $fh   = [float]$bh
+        $half = [float]($bh / 2)
         if ($t.SubText -ne "") {
-            $mf = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
-            $sf2= New-Object System.Drawing.Font("Consolas", 7)
-            $g.DrawString($t.MainText, $mf,  $tb,
-                (New-Object System.Drawing.RectangleF(4, 6, ($bw-8), ($bh/2)-2)), $sf)
-            $g.DrawString($t.SubText,  $sf2, $tb,
-                (New-Object System.Drawing.RectangleF(4, ($bh/2)+2, ($bw-8), ($bh/2)-8)), $sf)
-            $mf.Dispose(); $sf2.Dispose()
+            $mf       = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
+            $subFont  = New-Object System.Drawing.Font("Consolas", 7)
+            $rectTop  = New-Object System.Drawing.RectangleF([float]4, [float]6,  $fw, ($half - [float]2))
+            $rectBot  = New-Object System.Drawing.RectangleF([float]4, ($half + [float]2), $fw, ($half - [float]8))
+            $g.DrawString($t.MainText, $mf,      $tb, $rectTop, $sf)
+            $g.DrawString($t.SubText,  $subFont, $tb, $rectBot, $sf)
+            $mf.Dispose(); $subFont.Dispose()
         } else {
-            $mf = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
-            $g.DrawString($t.MainText, $mf, $tb,
-                (New-Object System.Drawing.RectangleF(4, 0, ($bw-8), $bh)), $sf)
+            $mf      = New-Object System.Drawing.Font("Consolas", 9, [System.Drawing.FontStyle]::Bold)
+            $rectAll = New-Object System.Drawing.RectangleF([float]4, [float]0, $fw, $fh)
+            $g.DrawString($t.MainText, $mf, $tb, $rectAll, $sf)
             $mf.Dispose()
         }
         $tb.Dispose(); $sf.Dispose(); $path.Dispose()
